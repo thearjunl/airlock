@@ -1,0 +1,46 @@
+# =============================================================================
+# AirLock — Docker Compose deployment
+# Starts the AirLock reverse proxy and an Nginx dashboard side-car
+# =============================================================================
+
+version: "3.9"
+
+services:
+  # --------------------------------------------------------------------------
+  # AirLock Proxy — AI API security gateway
+  # --------------------------------------------------------------------------
+  airlock:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: airlock-proxy
+    ports:
+      - "8080:8080"
+    environment:
+      - UPSTREAM=https://api.openai.com
+      - SANDBOX_RAG=true
+      - BLOCK_INDIRECT=true
+      - FAIL_OPEN=false
+      - PORT=8080
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/airlock/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # --------------------------------------------------------------------------
+  # Dashboard — Static Nginx front-end for the AirLock UI
+  # --------------------------------------------------------------------------
+  dashboard:
+    image: nginx:alpine
+    container_name: airlock-dashboard
+    ports:
+      - "3000:80"
+    volumes:
+      - ../dashboard:/usr/share/nginx/html:ro
+    depends_on:
+      airlock:
+        condition: service_healthy
+    restart: unless-stopped
