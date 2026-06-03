@@ -19,9 +19,11 @@ Client → AirLock Proxy (:8080) → Security Pipeline → Upstream API
 ## Features
 
 - 🔄 **Reverse Proxy** — Transparently forwards requests to upstream LLM APIs
-- 🛡️ **Prompt Injection Detection** — Catches known injection patterns
+- 🛡️ **Direct Injection Detection** — Catches 35+ known prompt injection patterns
+- 🧪 **Indirect Injection Detection** — Detects injections hidden in RAG/tool data
+- 🔒 **Context Sandboxing** — Wraps untrusted external data in security boundaries
 - 📊 **Risk Scoring** — Heuristic-based risk assessment with configurable thresholds
-- 🔍 **Payload Validation** — JSON structure, UTF-8, and size limit checks
+- 📋 **Threat Event Log** — In-memory event log with stats at `/airlock/events`
 - 🧬 **Obfuscation Detection** — Flags encoded/obfuscated content
 - 💚 **Health Endpoint** — Built-in health check at `/airlock/health`
 - 🌐 **CORS Support** — Configurable cross-origin resource sharing
@@ -49,6 +51,13 @@ curl http://localhost:8080/airlock/health
 # {"status":"ok","version":"0.1.0"}
 ```
 
+### Threat Events
+
+```bash
+curl http://localhost:8080/airlock/events
+# {"events":[...], "stats":{"total":5,"blocked":3,"l1_hits":2,"l2_hits":3,"high":3,"medium":2}}
+```
+
 ### Test a Request
 
 ```bash
@@ -63,18 +72,28 @@ curl -X POST http://localhost:8080/v1/chat/completions \
 
 ## Security Pipeline
 
-### Layer 1 — Scanner (`scanner/layer1.go`)
+### Layer 1 — Direct Injection Scanner (`scanner/layer1.go`)
 
-Fast, pattern-based checks:
-- ✅ JSON structure validation
-- ✅ Payload size limit (1 MB)
-- ✅ UTF-8 encoding validation
-- ✅ Prompt injection pattern detection
-- ✅ Required field validation (`model`)
+Fast, case-insensitive substring matching against 35+ patterns:
+- ✅ Instruction override attempts
+- ✅ Jailbreak / DAN patterns
+- ✅ System prompt extraction attempts
+- ✅ Role hijacking patterns
+- ✅ Token/delimiter injection
+- ✅ Multilingual patterns (French, Spanish)
 
-### Layer 2 — Sandbox (`sandbox/sandbox.go`)
+### Layer 2 — Context Sandbox (`sandbox/sandbox.go`)
 
-Deep heuristic analysis:
+RAG-aware indirect injection detection + data sandboxing:
+- ✅ 14 RAG trigger phrase detection
+- ✅ 13 indirect injection signal patterns
+- ✅ Delimiter escaping (AIRLOCK tags, `</system>`, `<|im_end|>`, etc.)
+- ✅ Security boundary wrapping with policy instruction
+- ✅ Defense-in-depth (always sandboxes even without injection signal)
+
+### Layer 3 — Heuristic Analysis (`sandbox/sandbox.go`)
+
+Deep structural analysis:
 - ✅ Suspicious role pattern detection
 - ✅ Encoded/obfuscated content detection
 - ✅ JSON nesting depth analysis
@@ -86,6 +105,7 @@ Deep heuristic analysis:
 | Environment Variable | Default | Description |
 |---------------------|---------|-------------|
 | `UPSTREAM` | `https://api.openai.com` | Upstream API URL |
+| `BLOCK_INDIRECT` | `false` | Hard-block indirect injection detections |
 
 ## License
 
