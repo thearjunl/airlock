@@ -14,6 +14,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -147,8 +148,20 @@ func processSecurityPipeline(body []byte) ([]byte, bool, string) {
 		return nil, false, fmt.Sprintf("Direct injection: %s", pattern)
 	}
 
-	// Layer 2: Deep sandbox analysis
-	analysisResult := sandbox.Analyze(body)
+	// Layer 2: ContextSandbox — indirect injection detection + wrapping
+	sandboxedBody, injectionDetected, snippet := sandbox.SandboxTransform(body)
+	if injectionDetected {
+		blockIndirect := os.Getenv("BLOCK_INDIRECT")
+		if strings.EqualFold(blockIndirect, "true") {
+			log.Printf("🚫 Indirect injection BLOCKED — snippet: %.200s", snippet)
+			return nil, false, fmt.Sprintf("Indirect injection detected in external data: %s", snippet)
+		}
+		// Log as MEDIUM severity but allow the sandboxed body through
+		log.Printf("⚠️  [MEDIUM] Indirect injection detected but forwarding sandboxed body — snippet: %.200s", snippet)
+	}
+
+	// Layer 3: Deep heuristic analysis on the (possibly sandboxed) body
+	analysisResult := sandbox.Analyze(sandboxedBody)
 	if !analysisResult.Allowed {
 		return nil, false, analysisResult.Reason
 	}
