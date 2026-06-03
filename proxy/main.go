@@ -141,14 +141,14 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request, proxy *httput
 // Returns the (possibly modified) body, whether the request is allowed,
 // and a reason string if it was blocked.
 func processSecurityPipeline(body []byte) ([]byte, bool, string) {
-	// Layer 1: Fast pattern-based scanning
-	scanResult := scanner.Layer1Scan(body)
-	if !scanResult.Allowed {
-		return nil, false, scanResult.Reason
+	// Layer 1: Direct prompt injection detection
+	if matched, pattern := scanner.Layer1Scan(body); matched {
+		log.Printf("🔍 Layer1 matched pattern: %q", pattern)
+		return nil, false, fmt.Sprintf("Direct injection: %s", pattern)
 	}
 
 	// Layer 2: Deep sandbox analysis
-	analysisResult := sandbox.Analyze(scanResult.ModifiedBody)
+	analysisResult := sandbox.Analyze(body)
 	if !analysisResult.Allowed {
 		return nil, false, analysisResult.Reason
 	}
