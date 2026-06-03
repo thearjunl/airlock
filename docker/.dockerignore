@@ -1,0 +1,18 @@
+# Ignore files not needed in the Docker build context
+.git
+.gitignore
+.env
+.env.local
+*.md
+LICENSE
+Makefile
+docker/
+dashboard/
+**/*_test.go
+*.exe
+*.dll
+bin/
+dist/
+coverage.*
+.idea/
+.vscode/
