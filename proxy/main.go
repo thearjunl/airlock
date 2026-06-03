@@ -60,6 +60,9 @@ func main() {
 	// Health check endpoint
 	router.HandleFunc("/airlock/health", healthHandler).Methods("GET")
 
+	// Threat event log endpoint
+	router.HandleFunc("/airlock/events", eventsHandler).Methods("GET")
+
 	// Intercepted endpoint: POST /v1/chat/completions
 	router.HandleFunc("/v1/chat/completions", func(w http.ResponseWriter, r *http.Request) {
 		handleChatCompletions(w, r, proxy, upstreamURL)
@@ -92,6 +95,10 @@ func main() {
 	log.Fatal(server.ListenAndServe())
 }
 
+// ---------------------------------------------------------------------------
+// HTTP Handlers
+// ---------------------------------------------------------------------------
+
 // healthHandler returns the health status and version of the AirLock proxy.
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
@@ -99,6 +106,18 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":  "ok",
 		"version": Version,
+	})
+}
+
+// eventsHandler returns all recorded threat events and aggregate statistics.
+func eventsHandler(w http.ResponseWriter, r *http.Request) {
+	events, stats := getEventsAndStats()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"events": events,
+		"stats":  stats,
 	})
 }
 
@@ -138,13 +157,20 @@ func handleChatCompletions(w http.ResponseWriter, r *http.Request, proxy *httput
 	proxy.ServeHTTP(w, r)
 }
 
+// ---------------------------------------------------------------------------
+// Security Pipeline
+// ---------------------------------------------------------------------------
+
 // processSecurityPipeline runs the request body through all security layers.
 // Returns the (possibly modified) body, whether the request is allowed,
 // and a reason string if it was blocked.
 func processSecurityPipeline(body []byte) ([]byte, bool, string) {
+	model := extractModel(body)
+
 	// Layer 1: Direct prompt injection detection
 	if matched, pattern := scanner.Layer1Scan(body); matched {
 		log.Printf("🔍 Layer1 matched pattern: %q", pattern)
+		recordEvent("L1_STREAM", "DIRECT_INJECTION", "HIGH", pattern, model, true)
 		return nil, false, fmt.Sprintf("Direct injection: %s", pattern)
 	}
 
@@ -154,10 +180,12 @@ func processSecurityPipeline(body []byte) ([]byte, bool, string) {
 		blockIndirect := os.Getenv("BLOCK_INDIRECT")
 		if strings.EqualFold(blockIndirect, "true") {
 			log.Printf("🚫 Indirect injection BLOCKED — snippet: %.200s", snippet)
+			recordEvent("L2_SANDBOX", "INDIRECT_INJECTION", "HIGH", snippet, model, true)
 			return nil, false, fmt.Sprintf("Indirect injection detected in external data: %s", snippet)
 		}
 		// Log as MEDIUM severity but allow the sandboxed body through
 		log.Printf("⚠️  [MEDIUM] Indirect injection detected but forwarding sandboxed body — snippet: %.200s", snippet)
+		recordEvent("L2_SANDBOX", "INDIRECT_INJECTION", "MEDIUM", snippet, model, false)
 	}
 
 	// Layer 3: Deep heuristic analysis on the (possibly sandboxed) body
