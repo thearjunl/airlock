@@ -47,3 +47,21 @@ jobs:
 
       - name: Run tests
         run: go test ./... -v -race -timeout 30s
+
+  # ---------------------------------------------------------------------------
+  # Docker — build and push container image to GHCR
+  # ---------------------------------------------------------------------------
+  docker:
+    name: Docker Build & Push
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
