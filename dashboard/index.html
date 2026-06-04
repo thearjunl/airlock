@@ -325,6 +325,28 @@ tr:hover { background: rgba(0, 212, 170, .04); }
     <div class="stat-card orange" style="animation-delay:.25s"><div class="stat-label">Medium Severity</div><div class="stat-value" id="statMedium">0</div></div>
   </div>
 
+  <!-- Event Log -->
+  <div class="section-title">Threat Event Log</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Time</th>
+          <th>Layer</th>
+          <th>Threat</th>
+          <th>Severity</th>
+          <th>Action</th>
+          <th>Model</th>
+          <th>Snippet</th>
+        </tr>
+      </thead>
+      <tbody id="eventBody">
+        <tr><td colspan="8" class="empty-state">Waiting for events…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
 </div>
 </body>
 </html>
