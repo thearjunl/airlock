@@ -434,6 +434,36 @@ function esc(s) {
   d.textContent = s;
   return d.innerHTML;
 }
+
+/* ── Render Function ── */
+function render(data) {
+  // Update stat cards
+  document.getElementById('statTotal').textContent   = data.stats.total;
+  document.getElementById('statBlocked').textContent  = data.stats.blocked;
+  document.getElementById('statL1').textContent       = data.stats.l1_hits;
+  document.getElementById('statL2').textContent       = data.stats.l2_hits;
+  document.getElementById('statHigh').textContent     = data.stats.high;
+  document.getElementById('statMedium').textContent   = data.stats.medium;
+
+  // Populate event table
+  const tb = document.getElementById('eventBody');
+  if (!data.events || data.events.length === 0) {
+    tb.innerHTML = '<tr><td colspan="8" class="empty-state">No threat events recorded yet.</td></tr>';
+    return;
+  }
+
+  const sorted = [...data.events].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  tb.innerHTML = sorted.map(e => `<tr>
+    <td class="id-cell">${esc(e.id)}</td>
+    <td class="time-cell">${fmtTime(e.timestamp)}</td>
+    <td>${layerBadge(e.layer)}</td>
+    <td>${esc(e.threat)}</td>
+    <td>${sevBadge(e.severity)}</td>
+    <td>${actBadge(e.blocked)}</td>
+    <td class="model-cell">${esc(e.model)}</td>
+    <td><span class="snippet" title="${esc(e.snippet)}">${esc(e.snippet)}</span></td>
+  </tr>`).join('');
+}
 </script>
 
 </body>
