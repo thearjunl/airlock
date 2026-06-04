@@ -1,0 +1,13 @@
+# =============================================================================
+# AirLock — CI/CD Pipeline
+# Runs tests, builds Docker image, and scans for vulnerabilities
+# =============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
