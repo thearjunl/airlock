@@ -464,6 +464,26 @@ function render(data) {
     <td><span class="snippet" title="${esc(e.snippet)}">${esc(e.snippet)}</span></td>
   </tr>`).join('');
 }
+
+/* ── Fetch & Auto-Refresh ── */
+async function fetchData() {
+  try {
+    const r = await fetch(API);
+    if (!r.ok) throw new Error(r.status);
+    const d = await r.json();
+    render(d);
+  } catch (e) {
+    // Proxy offline — show demo data
+    render(DEMO);
+  }
+  document.getElementById('lastRefresh').textContent = new Date().toLocaleTimeString('en-GB');
+}
+
+// Initial load
+fetchData();
+
+// Auto-refresh every 5 seconds
+setInterval(fetchData, 5000);
 </script>
 
 </body>
