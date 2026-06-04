@@ -41,3 +41,6 @@ jobs:
 
       - name: Vet (static analysis)
         run: go vet ./...
+
+      - name: Build (smoke test)
+        run: go build ./proxy/
