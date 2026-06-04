@@ -404,6 +404,36 @@ const DEMO = {
     }
   ]
 };
+
+/* ── Helper Functions ── */
+function fmtTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function layerBadge(l) {
+  return l === 'L1_STREAM'
+    ? '<span class="badge badge-l1">L1 Stream</span>'
+    : '<span class="badge badge-l2">L2 Sandbox</span>';
+}
+
+function sevBadge(s) {
+  return s === 'HIGH'
+    ? '<span class="badge badge-high">HIGH</span>'
+    : '<span class="badge badge-medium">MEDIUM</span>';
+}
+
+function actBadge(b) {
+  return b
+    ? '<span class="badge badge-blocked">BLOCKED</span>'
+    : '<span class="badge badge-sandboxed">SANDBOXED</span>';
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
 </script>
 
 </body>
