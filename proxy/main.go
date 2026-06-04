@@ -14,6 +14,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -67,6 +68,16 @@ func main() {
 	router.HandleFunc("/v1/chat/completions", func(w http.ResponseWriter, r *http.Request) {
 		handleChatCompletions(w, r, proxy, upstreamURL)
 	}).Methods("POST")
+
+	// Serve the dashboard static files at /dashboard/
+	dashboardDir := findDashboardDir()
+	if dashboardDir != "" {
+		log.Printf("   Dashboard: serving from %s", dashboardDir)
+		fs := http.FileServer(http.Dir(dashboardDir))
+		router.PathPrefix("/dashboard/").Handler(
+			http.StripPrefix("/dashboard/", fs),
+		)
+	}
 
 	// All other requests pass through to the upstream proxy
 	router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -198,6 +209,35 @@ func processSecurityPipeline(body []byte) ([]byte, bool, string) {
 }
 
 // writeJSONError writes a structured JSON error response.
+// findDashboardDir locates the dashboard directory relative to the working
+// directory or the executable path. Returns "" if not found.
+func findDashboardDir() string {
+	candidates := []string{
+		"dashboard",
+		"../dashboard",
+	}
+
+	// Also try relative to the executable
+	if exe, err := os.Executable(); err == nil {
+		exeDir := filepath.Dir(exe)
+		candidates = append(candidates,
+			filepath.Join(exeDir, "dashboard"),
+			filepath.Join(exeDir, "..", "dashboard"),
+		)
+	}
+
+	for _, dir := range candidates {
+		if info, err := os.Stat(dir); err == nil && info.IsDir() {
+			if abs, err := filepath.Abs(dir); err == nil {
+				return abs
+			}
+			return dir
+		}
+	}
+	log.Println("⚠️  Dashboard directory not found — /dashboard/ route disabled")
+	return ""
+}
+
 func writeJSONError(w http.ResponseWriter, statusCode int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
