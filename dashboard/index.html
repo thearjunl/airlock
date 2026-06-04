@@ -48,6 +48,25 @@ body::before {
     linear-gradient(90deg, rgba(0, 212, 170, .03) 1px, transparent 1px);
   background-size: 40px 40px;
 }
+
+/* ── Scan-line Animation ── */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 9999;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--teal), transparent);
+  animation: scanline 4s linear infinite;
+  opacity: 0.5;
+}
+@keyframes scanline {
+  0%   { top: 0; }
+  100% { top: 100vh; }
+}
 </style>
 </head>
 <body>
