@@ -35,6 +35,19 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
 }
+
+/* ── Grid Texture Overlay ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(0, 212, 170, .03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 170, .03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
 </style>
 </head>
 <body>
