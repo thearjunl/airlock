@@ -8,6 +8,34 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Design Tokens ── */
+:root {
+  --bg:       #080c10;
+  --surface:  #0d1117;
+  --surface2: #161b22;
+  --border:   #21262d;
+  --text:     #e6edf3;
+  --text-dim: #8b949e;
+  --teal:     #00d4aa;
+  --red:      #ff4d6d;
+  --orange:   #ffa500;
+  --blue:     #58a6ff;
+  --mono:     'JetBrains Mono', monospace;
+  --heading:  'Syne', sans-serif;
+}
+
+body {
+  font-family: var(--mono);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+</style>
 </head>
 <body>
 </body>
