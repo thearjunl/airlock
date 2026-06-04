@@ -185,6 +185,95 @@ body::after {
     transform: translateY(0);
   }
 }
+
+/* ── Event Log ── */
+.section-title {
+  font-family: var(--heading);
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-title::before {
+  content: '>';
+  color: var(--teal);
+}
+.table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: auto;
+  margin-bottom: 32px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 800px;
+}
+thead { background: var(--surface2); }
+th {
+  padding: 12px 14px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  font-size: 10px;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+}
+td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover { background: rgba(0, 212, 170, .04); }
+
+/* ── Badges ── */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+.badge-l1       { background: rgba(0,212,170,.15); color: var(--teal);   border: 1px solid rgba(0,212,170,.3); }
+.badge-l2       { background: rgba(88,166,255,.15); color: var(--blue);  border: 1px solid rgba(88,166,255,.3); }
+.badge-high     { background: rgba(255,77,109,.15); color: var(--red);   border: 1px solid rgba(255,77,109,.3); }
+.badge-medium   { background: rgba(255,165,0,.15);  color: var(--orange); border: 1px solid rgba(255,165,0,.3); }
+.badge-blocked  { background: rgba(255,77,109,.2);  color: var(--red);   border: 1px solid rgba(255,77,109,.4); }
+.badge-sandboxed { background: rgba(255,165,0,.2);  color: var(--orange); border: 1px solid rgba(255,165,0,.4); }
+
+/* ── Cell Helpers ── */
+.snippet {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-dim);
+  cursor: help;
+  font-size: 11px;
+}
+.snippet:hover {
+  white-space: normal;
+  word-break: break-all;
+  color: var(--text);
+}
+.time-cell  { color: var(--text-dim); font-size: 11px; white-space: nowrap; }
+.id-cell    { color: var(--teal); font-weight: 600; }
+.model-cell { color: var(--text-dim); }
+.empty-state {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 13px;
+}
 </style>
 </head>
 <body>
