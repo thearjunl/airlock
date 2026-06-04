@@ -181,3 +181,69 @@ func TestTruncateSnippet_Long(t *testing.T) {
 		t.Errorf("Expected 120 runes, got %d", len([]rune(result)))
 	}
 }
+
+func TestGetEventsAndStats_EmptyStore(t *testing.T) {
+	eventStore.mu.Lock()
+	eventStore.events = make([]ThreatEvent, 0)
+	eventStore.mu.Unlock()
+
+	events, stats := getEventsAndStats()
+	if len(events) != 0 {
+		t.Errorf("Expected 0 events, got %d", len(events))
+	}
+	if stats.Total != 0 || stats.Blocked != 0 || stats.L1Hits != 0 ||
+		stats.L2Hits != 0 || stats.High != 0 || stats.Medium != 0 {
+		t.Errorf("Expected all zero stats, got %+v", stats)
+	}
+}
+
+func TestTruncateSnippet_Unicode(t *testing.T) {
+	// Emoji are multi-byte but should count as single runes
+	s := ""
+	for i := 0; i < 150; i++ {
+		s += "🔒"
+	}
+	result := truncateSnippet(s, 120)
+	if len([]rune(result)) != 120 {
+		t.Errorf("Expected 120 runes for unicode, got %d", len([]rune(result)))
+	}
+}
+
+func TestRecordEvent_UniqueIDs(t *testing.T) {
+	eventStore.mu.Lock()
+	eventStore.events = make([]ThreatEvent, 0)
+	eventStore.mu.Unlock()
+
+	recordEvent("L1_STREAM", "TEST", "HIGH", "a", "gpt-4", true)
+	recordEvent("L1_STREAM", "TEST", "HIGH", "b", "gpt-4", true)
+
+	events, _ := getEventsAndStats()
+	if events[0].ID == events[1].ID {
+		t.Error("Event IDs should be unique")
+	}
+}
+
+func TestRecordEvent_ConcurrentSafety(t *testing.T) {
+	eventStore.mu.Lock()
+	eventStore.events = make([]ThreatEvent, 0)
+	eventStore.mu.Unlock()
+
+	done := make(chan bool, 50)
+	for i := 0; i < 50; i++ {
+		go func() {
+			recordEvent("L1_STREAM", "DIRECT_INJECTION", "HIGH", "test", "gpt-4", true)
+			done <- true
+		}()
+	}
+	for i := 0; i < 50; i++ {
+		<-done
+	}
+
+	events, stats := getEventsAndStats()
+	if len(events) != 50 {
+		t.Errorf("Expected 50 events from concurrent writes, got %d", len(events))
+	}
+	if stats.Total != 50 {
+		t.Errorf("Expected total=50, got %d", stats.Total)
+	}
+}
