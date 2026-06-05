@@ -27,6 +27,7 @@ Client → AirLock Proxy (:8080) → Security Pipeline → Upstream API
 - 🧬 **Obfuscation Detection** — Flags encoded/obfuscated content
 - 💚 **Health Endpoint** — Built-in health check at `/airlock/health`
 - 🌐 **CORS Support** — Configurable cross-origin resource sharing
+- 🔔 **Webhook Alerting** — Notify Slack or any HTTP endpoint on HIGH severity blocked events
 
 ## Quick Start
 
@@ -106,6 +107,8 @@ Deep structural analysis:
 |---------------------|---------|-------------|
 | `UPSTREAM` | `https://api.openai.com` | Upstream API URL |
 | `BLOCK_INDIRECT` | `false` | Hard-block indirect injection detections |
+| `WEBHOOK_URL` | _(empty — disabled)_ | URL to POST alert payloads on HIGH severity blocked events |
+| `AIRLOCK_ENV` | `production` | Environment label included in webhook payloads |
 
 ## License
 
