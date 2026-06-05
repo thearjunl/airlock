@@ -86,3 +86,10 @@ func Layer1Scan(body []byte) (bool, string) {
 
 	return false, ""
 }
+
+// AppendPatterns adds custom patterns to the injection detection list.
+// This is used by the custom rules loader to extend Layer 1 scanning
+// at startup without modifying the built-in pattern table.
+func AppendPatterns(patterns []string) {
+	injectionPatterns = append(injectionPatterns, patterns...)
+}
