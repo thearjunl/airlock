@@ -20,6 +20,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
+	"github.com/thearjunl/airlock/alerting"
 	"github.com/thearjunl/airlock/config"
 	"github.com/thearjunl/airlock/sandbox"
 	"github.com/thearjunl/airlock/scanner"
@@ -51,6 +52,15 @@ func main() {
 
 	// Load custom rules from YAML (non-fatal if missing)
 	loadCustomRules()
+
+	// Initialise webhook alerting
+	wc := alerting.NewWebhookClient()
+	SetWebhookClient(wc)
+	if wc.Enabled() {
+		log.Printf("   🔔 Webhook alerting: enabled")
+	} else {
+		log.Printf("   🔔 Webhook alerting: disabled (set WEBHOOK_URL to enable)")
+	}
 
 	// Create reverse proxy
 	proxy := httputil.NewSingleHostReverseProxy(upstreamURL)
