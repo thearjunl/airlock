@@ -344,3 +344,10 @@ func measureJSONDepth(v interface{}, current int) int {
 	}
 	return maxDepth
 }
+
+// AppendRAGTriggers adds custom RAG trigger phrases to the detection list.
+// This is used by the custom rules loader to extend Layer 2 sandboxing
+// at startup without modifying the built-in trigger table.
+func AppendRAGTriggers(phrases []string) {
+	ragTriggerPhrases = append(ragTriggerPhrases, phrases...)
+}
