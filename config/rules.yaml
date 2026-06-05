@@ -1,0 +1,44 @@
+# AirLock Custom Rules Configuration
+# Operators can extend AirLock's detection capabilities without recompiling
+# by adding rules to this file.
+#
+# Supported rule types:
+#   - keyword   (layer: L1) — matched against the raw request body
+#   - rag_trigger (layer: L2) — adds custom RAG trigger phrases to the sandbox
+#
+# Supported actions:
+#   - block     — reject the request immediately
+#   - log       — allow the request but record a threat event
+#   - sandbox   — apply sandbox wrapping (L2 only)
+
+version: "1"
+rules:
+  - id: "custom-001"
+    name: "Block competitor mentions"
+    layer: L1
+    type: keyword
+    patterns:
+      - "switch to gpt"
+      - "use claude instead"
+    action: block
+    severity: LOW
+
+  - id: "custom-002"
+    name: "Flag financial advice requests"
+    layer: L1
+    type: keyword
+    patterns:
+      - "give me stock tips"
+      - "should i invest in"
+    action: log
+    severity: LOW
+
+  - id: "custom-003"
+    name: "Custom RAG trigger phrases"
+    layer: L2
+    type: rag_trigger
+    patterns:
+      - "confluence page:"
+      - "notion doc:"
+      - "jira ticket:"
+    action: sandbox
