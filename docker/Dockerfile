@@ -20,6 +20,8 @@ RUN go mod download
 
 # Copy source directories
 COPY proxy/ proxy/
+COPY alerting/ alerting/
+COPY config/ config/
 COPY scanner/ scanner/
 COPY sandbox/ sandbox/
 
