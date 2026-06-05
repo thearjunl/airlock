@@ -11,7 +11,18 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/thearjunl/airlock/alerting"
 )
+
+// webhookClient is the global alerting client, initialised at startup.
+// When nil or disabled, no webhook alerts are sent.
+var webhookClient *alerting.WebhookClient
+
+// SetWebhookClient sets the global webhook client used for alerting.
+// Called once from main() during startup.
+func SetWebhookClient(wc *alerting.WebhookClient) {
+	webhookClient = wc
+}
 
 // ThreatEvent represents a single security event recorded by the pipeline.
 type ThreatEvent struct {
@@ -63,6 +74,15 @@ func recordEvent(layer, threat, severity, snippet, model string, blocked bool) {
 
 	log.Printf("📋 Event recorded: [%s] %s/%s blocked=%v model=%q snippet=%.60s",
 		event.ID, layer, threat, blocked, model, snippet)
+
+	// Dispatch webhook alert for HIGH severity blocked events
+	if severity == "HIGH" && blocked && webhookClient != nil {
+		webhookClient.Send(
+			event.ID,
+			event.Timestamp.Format(time.RFC3339),
+			layer, threat, severity, snippet, model, blocked,
+		)
+	}
 }
 
 // getEventsAndStats returns a snapshot of all events and computed statistics.
