@@ -20,6 +20,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
+	"github.com/thearjunl/airlock/config"
 	"github.com/thearjunl/airlock/sandbox"
 	"github.com/thearjunl/airlock/scanner"
 )
@@ -47,6 +48,9 @@ func main() {
 	log.Printf("🔒 AirLock v%s starting", Version)
 	log.Printf("   Upstream: %s", upstreamURL.String())
 	log.Printf("   Listening on %s", ListenAddr)
+
+	// Load custom rules from YAML (non-fatal if missing)
+	loadCustomRules()
 
 	// Create reverse proxy
 	proxy := httputil.NewSingleHostReverseProxy(upstreamURL)
@@ -248,3 +252,67 @@ func writeJSONError(w http.ResponseWriter, statusCode int, message string) {
 		},
 	})
 }
+
+// ---------------------------------------------------------------------------
+// Custom Rules Loader
+// ---------------------------------------------------------------------------
+
+// loadCustomRules attempts to load config/rules.yaml from several candidate
+// locations relative to the working directory and the executable. If the file
+// is not found, a warning is logged and AirLock continues with built-in
+// defaults only.
+func loadCustomRules() {
+	candidates := []string{
+		"config/rules.yaml",
+		"../config/rules.yaml",
+	}
+
+	// Also try relative to the executable
+	if exe, err := os.Executable(); err == nil {
+		exeDir := filepath.Dir(exe)
+		candidates = append(candidates,
+			filepath.Join(exeDir, "config", "rules.yaml"),
+			filepath.Join(exeDir, "..", "config", "rules.yaml"),
+		)
+	}
+
+	var cfg *config.RulesConfig
+	var loadErr error
+
+	for _, path := range candidates {
+		cfg, loadErr = config.LoadRules(path)
+		if loadErr == nil {
+			break
+		}
+	}
+
+	if cfg == nil {
+		log.Printf("⚠️  No custom rules file found — continuing with built-in defaults")
+		return
+	}
+
+	var l1Count, l2Count int
+
+	for _, rule := range cfg.Rules {
+		switch strings.ToUpper(rule.Layer) {
+		case "L1":
+			if strings.ToLower(rule.Type) == "keyword" && len(rule.Patterns) > 0 {
+				scanner.AppendPatterns(rule.Patterns)
+				l1Count += len(rule.Patterns)
+				log.Printf("   📏 Rule %s (%s): added %d L1 keyword patterns", rule.ID, rule.Name, len(rule.Patterns))
+			}
+		case "L2":
+			if strings.ToLower(rule.Type) == "rag_trigger" && len(rule.Patterns) > 0 {
+				sandbox.AppendRAGTriggers(rule.Patterns)
+				l2Count += len(rule.Patterns)
+				log.Printf("   📏 Rule %s (%s): added %d L2 RAG trigger phrases", rule.ID, rule.Name, len(rule.Patterns))
+			}
+		default:
+			log.Printf("   ⚠️  Rule %s: unknown layer %q — skipped", rule.ID, rule.Layer)
+		}
+	}
+
+	total := l1Count + l2Count
+	log.Printf("   Loaded %d custom rules from rules.yaml (%d L1 patterns, %d L2 triggers)", total, l1Count, l2Count)
+}
+
