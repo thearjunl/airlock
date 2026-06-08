@@ -66,6 +66,79 @@ var injectionPatterns = []string{
 	"ignorar instrucciones anteriores",
 }
 
+// CustomRule represents a custom L1 detection rule with metadata.
+type CustomRule struct {
+	ID       string
+	Name     string
+	Patterns []string
+	Action   string
+	Severity string
+}
+
+// MatchInfo holds metadata about a matched pattern.
+type MatchInfo struct {
+	Pattern  string
+	Action   string
+	Severity string
+	RuleID   string
+}
+
+// customRules holds the registered L1 custom rules.
+var customRules []CustomRule
+
+// AppendCustomRule registers a new L1 custom rule.
+func AppendCustomRule(id, name string, patterns []string, action, severity string) {
+	customRules = append(customRules, CustomRule{
+		ID:       id,
+		Name:     name,
+		Patterns: patterns,
+		Action:   action,
+		Severity: severity,
+	})
+}
+
+// Layer1ScanDetailed scans the raw JSON body and returns match metadata.
+// It checks custom rules first, then falls back to built-in patterns.
+func Layer1ScanDetailed(body []byte) (bool, MatchInfo) {
+	lower := strings.ToLower(string(body))
+
+	// Scan custom rules first
+	for _, rule := range customRules {
+		for _, pattern := range rule.Patterns {
+			if strings.Contains(lower, strings.ToLower(pattern)) {
+				action := rule.Action
+				if action == "" {
+					action = "block"
+				}
+				severity := rule.Severity
+				if severity == "" {
+					severity = "LOW"
+				}
+				return true, MatchInfo{
+					Pattern:  pattern,
+					Action:   strings.ToLower(action),
+					Severity: strings.ToUpper(severity),
+					RuleID:   rule.ID,
+				}
+			}
+		}
+	}
+
+	// Scan built-in patterns
+	for _, pattern := range injectionPatterns {
+		if strings.Contains(lower, pattern) {
+			return true, MatchInfo{
+				Pattern:  pattern,
+				Action:   "block",
+				Severity: "HIGH",
+				RuleID:   "built-in",
+			}
+		}
+	}
+
+	return false, MatchInfo{}
+}
+
 // Layer1Scan scans the raw JSON body for direct prompt injection patterns
 // using case-insensitive substring search.
 //
@@ -76,15 +149,8 @@ var injectionPatterns = []string{
 //   - (true, matchedPattern) if any injection pattern is found
 //   - (false, "") if the body is clean
 func Layer1Scan(body []byte) (bool, string) {
-	lower := strings.ToLower(string(body))
-
-	for _, pattern := range injectionPatterns {
-		if strings.Contains(lower, pattern) {
-			return true, pattern
-		}
-	}
-
-	return false, ""
+	matched, info := Layer1ScanDetailed(body)
+	return matched, info.Pattern
 }
 
 // AppendPatterns adds custom patterns to the injection detection list.
