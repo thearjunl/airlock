@@ -193,10 +193,13 @@ func processSecurityPipeline(body []byte) ([]byte, bool, string) {
 	model := extractModel(body)
 
 	// Layer 1: Direct prompt injection detection
-	if matched, pattern := scanner.Layer1Scan(body); matched {
-		log.Printf("🔍 Layer1 matched pattern: %q", pattern)
-		recordEvent("L1_STREAM", "DIRECT_INJECTION", "HIGH", pattern, model, true)
-		return nil, false, fmt.Sprintf("Direct injection: %s", pattern)
+	if matched, matchInfo := scanner.Layer1ScanDetailed(body); matched {
+		log.Printf("🔍 Layer1 matched pattern: %q (Rule: %s, Action: %s, Severity: %s)", matchInfo.Pattern, matchInfo.RuleID, matchInfo.Action, matchInfo.Severity)
+		blocked := matchInfo.Action == "block"
+		recordEvent("L1_STREAM", "DIRECT_INJECTION", matchInfo.Severity, matchInfo.Pattern, model, blocked)
+		if blocked {
+			return nil, false, fmt.Sprintf("Direct injection: %s", matchInfo.Pattern)
+		}
 	}
 
 	// Layer 2: ContextSandbox — indirect injection detection + wrapping
@@ -307,7 +310,7 @@ func loadCustomRules() {
 		switch strings.ToUpper(rule.Layer) {
 		case "L1":
 			if strings.ToLower(rule.Type) == "keyword" && len(rule.Patterns) > 0 {
-				scanner.AppendPatterns(rule.Patterns)
+				scanner.AppendCustomRule(rule.ID, rule.Name, rule.Patterns, rule.Action, rule.Severity)
 				l1Count += len(rule.Patterns)
 				log.Printf("   📏 Rule %s (%s): added %d L1 keyword patterns", rule.ID, rule.Name, len(rule.Patterns))
 			}
