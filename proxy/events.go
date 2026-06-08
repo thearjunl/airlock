@@ -1,6 +1,6 @@
 // Package main — events.go
 // Thread-safe in-memory threat event logging for the AirLock proxy.
-// This file defines the ThreatEvent and EventStats types, the global
+// This file defines the EventStats type, the global
 // event store, and helper functions for recording and retrieving events.
 package main
 
@@ -24,18 +24,6 @@ func SetWebhookClient(wc *alerting.WebhookClient) {
 	webhookClient = wc
 }
 
-// ThreatEvent represents a single security event recorded by the pipeline.
-type ThreatEvent struct {
-	ID        string    `json:"id"`
-	Timestamp time.Time `json:"timestamp"`
-	Layer     string    `json:"layer"`
-	Threat    string    `json:"threat"`
-	Severity  string    `json:"severity"`
-	Blocked   bool      `json:"blocked"`
-	Snippet   string    `json:"snippet"`
-	Model     string    `json:"model"`
-}
-
 // EventStats holds aggregate statistics computed from the event log.
 type EventStats struct {
 	Total   int `json:"total"`
@@ -49,15 +37,15 @@ type EventStats struct {
 // eventStore is the global thread-safe event log.
 var eventStore = struct {
 	mu     sync.Mutex
-	events []ThreatEvent
+	events []alerting.ThreatEvent
 }{
-	events: make([]ThreatEvent, 0),
+	events: make([]alerting.ThreatEvent, 0),
 }
 
 // recordEvent appends a new ThreatEvent to the in-memory event log.
 // It is safe to call from multiple goroutines concurrently.
 func recordEvent(layer, threat, severity, snippet, model string, blocked bool) {
-	event := ThreatEvent{
+	event := alerting.ThreatEvent{
 		ID:        uuid.New().String()[:8],
 		Timestamp: time.Now(),
 		Layer:     layer,
@@ -77,21 +65,19 @@ func recordEvent(layer, threat, severity, snippet, model string, blocked bool) {
 
 	// Dispatch webhook alert for HIGH severity blocked events
 	if severity == "HIGH" && blocked && webhookClient != nil {
-		webhookClient.Send(
-			event.ID,
-			event.Timestamp.Format(time.RFC3339),
-			layer, threat, severity, snippet, model, blocked,
-		)
+		if err := webhookClient.Send(event); err != nil {
+			log.Printf("⚠️  Webhook client Send error: %v", err)
+		}
 	}
 }
 
 // getEventsAndStats returns a snapshot of all events and computed statistics.
-func getEventsAndStats() ([]ThreatEvent, EventStats) {
+func getEventsAndStats() ([]alerting.ThreatEvent, EventStats) {
 	eventStore.mu.Lock()
 	defer eventStore.mu.Unlock()
 
 	// Copy the slice so the caller doesn't hold the lock
-	snapshot := make([]ThreatEvent, len(eventStore.events))
+	snapshot := make([]alerting.ThreatEvent, len(eventStore.events))
 	copy(snapshot, eventStore.events)
 
 	var stats EventStats
