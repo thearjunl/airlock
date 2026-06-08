@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,6 +23,7 @@ import (
 	"github.com/rs/cors"
 	"github.com/thearjunl/airlock/alerting"
 	"github.com/thearjunl/airlock/config"
+	"github.com/thearjunl/airlock/ratelimit"
 	"github.com/thearjunl/airlock/sandbox"
 	"github.com/thearjunl/airlock/scanner"
 )
@@ -34,6 +36,8 @@ const (
 	// ListenAddr is the address the proxy listens on.
 	ListenAddr = ":8080"
 )
+
+var limiter *ratelimit.RateLimiter
 
 func main() {
 	upstream := os.Getenv("UPSTREAM")
@@ -49,6 +53,14 @@ func main() {
 	log.Printf("🔒 AirLock v%s starting", Version)
 	log.Printf("   Upstream: %s", upstreamURL.String())
 	log.Printf("   Listening on %s", ListenAddr)
+
+	// Initialise RateLimiter
+	limiter = ratelimit.NewRateLimiter()
+	if limiter.Enabled() {
+		log.Printf("   🚦 Rate limiting: enabled")
+	} else {
+		log.Printf("   🚦 Rate limiting: disabled")
+	}
 
 	// Load custom rules from YAML (non-fatal if missing)
 	loadCustomRules()
@@ -150,6 +162,30 @@ func eventsHandler(w http.ResponseWriter, r *http.Request) {
 // security pipeline on the request body, and either blocks or forwards.
 func handleChatCompletions(w http.ResponseWriter, r *http.Request, proxy *httputil.ReverseProxy, upstreamURL *url.URL) {
 	startTime := time.Now()
+
+	// Rate limiting check
+	if limiter != nil && limiter.Enabled() {
+		key := limiter.ExtractKey(r)
+		allowed, remaining, resetIn := limiter.Allow(key)
+
+		// Set headers
+		w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(remaining))
+		w.Header().Set("X-RateLimit-Reset", strconv.Itoa(int(resetIn.Seconds())))
+
+		if !allowed {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusTooManyRequests)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error": map[string]interface{}{
+					"message": fmt.Sprintf("AirLock rate limit exceeded. Retry after %ds", int(resetIn.Seconds())),
+					"type":    "rate_limit",
+					"code":    http.StatusTooManyRequests,
+				},
+			})
+			log.Printf("🚦 Rate limit exceeded for key %q. Retry in %s", key, resetIn)
+			return
+		}
+	}
 
 	// Read the full request body
 	body, err := io.ReadAll(r.Body)
