@@ -15,6 +15,18 @@ import (
 	"time"
 )
 
+// ThreatEvent represents a single security event recorded by the pipeline.
+type ThreatEvent struct {
+	ID        string    `json:"id"`
+	Timestamp time.Time `json:"timestamp"`
+	Layer     string    `json:"layer"`
+	Threat    string    `json:"threat"`
+	Severity  string    `json:"severity"`
+	Blocked   bool      `json:"blocked"`
+	Snippet   string    `json:"snippet"`
+	Model     string    `json:"model"`
+}
+
 // AlertPayload is the JSON body sent to the webhook endpoint.
 // It includes a Slack-compatible "text" field so it works out of the box
 // as a Slack incoming webhook.
@@ -62,9 +74,9 @@ func (w *WebhookClient) Enabled() bool {
 // non-blocking — delivery runs in a background goroutine so it never
 // delays the proxy request path. On failure, a single retry is
 // attempted after 500 ms.
-func (w *WebhookClient) Send(id, timestamp, layer, threat, severity, snippet, model string, blocked bool) {
+func (w *WebhookClient) Send(event ThreatEvent) error {
 	if !w.enabled {
-		return
+		return nil
 	}
 
 	env := os.Getenv("AIRLOCK_ENV")
@@ -73,28 +85,27 @@ func (w *WebhookClient) Send(id, timestamp, layer, threat, severity, snippet, mo
 	}
 
 	// Build Slack-compatible one-liner
-	blockedStr := "detected"
-	if blocked {
-		blockedStr = "blocked"
-	}
-	text := fmt.Sprintf("🚨 [%s] %s %s by AirLock %s | Model: %s | %s",
-		severity, threat, blockedStr, layer, model, snippet)
+	text := fmt.Sprintf(":rotating_light: [%s] %s blocked by AirLock %s | Model: %s | %s",
+		event.Severity, event.Threat, event.Layer, event.Model, event.Snippet)
 
 	payload := AlertPayload{
-		ID:           id,
-		Timestamp:    timestamp,
-		Layer:        layer,
-		Threat:       threat,
-		Severity:     severity,
-		Blocked:      blocked,
-		Snippet:      snippet,
-		Model:        model,
+		ID:           event.ID,
+		Timestamp:    event.Timestamp.Format(time.RFC3339),
+		Layer:        event.Layer,
+		Threat:       event.Threat,
+		Severity:     event.Severity,
+		Blocked:      event.Blocked,
+		Snippet:      event.Snippet,
+		Model:        event.Model,
 		ProxyVersion: "0.1.0",
 		Environment:  env,
 		Text:         text,
 	}
 
+	// Asynchronous goroutine processing so proxy request path is never delayed (<1ms tax)
 	go w.sendWithRetry(payload)
+
+	return nil
 }
 
 // sendWithRetry attempts to POST the payload, retrying once on failure.
