@@ -3,12 +3,14 @@ package main
 import (
 	"testing"
 	"time"
+
+	"github.com/thearjunl/airlock/alerting"
 )
 
 func TestRecordEvent_AppendsToLog(t *testing.T) {
 	// Clear the event store before test
 	eventStore.mu.Lock()
-	eventStore.events = make([]ThreatEvent, 0)
+	eventStore.events = make([]alerting.ThreatEvent, 0)
 	eventStore.mu.Unlock()
 
 	recordEvent("L1_STREAM", "DIRECT_INJECTION", "HIGH", "ignore previous instructions", "gpt-4", true)
@@ -44,7 +46,7 @@ func TestRecordEvent_AppendsToLog(t *testing.T) {
 
 func TestRecordEvent_SnippetTruncation(t *testing.T) {
 	eventStore.mu.Lock()
-	eventStore.events = make([]ThreatEvent, 0)
+	eventStore.events = make([]alerting.ThreatEvent, 0)
 	eventStore.mu.Unlock()
 
 	longSnippet := ""
@@ -61,7 +63,7 @@ func TestRecordEvent_SnippetTruncation(t *testing.T) {
 
 func TestGetEventsAndStats_AggregatesCorrectly(t *testing.T) {
 	eventStore.mu.Lock()
-	eventStore.events = make([]ThreatEvent, 0)
+	eventStore.events = make([]alerting.ThreatEvent, 0)
 	eventStore.mu.Unlock()
 
 	recordEvent("L1_STREAM", "DIRECT_INJECTION", "HIGH", "pattern1", "gpt-4", true)
@@ -92,7 +94,7 @@ func TestGetEventsAndStats_AggregatesCorrectly(t *testing.T) {
 
 func TestGetEventsAndStats_ReturnsSnapshot(t *testing.T) {
 	eventStore.mu.Lock()
-	eventStore.events = make([]ThreatEvent, 0)
+	eventStore.events = make([]alerting.ThreatEvent, 0)
 	eventStore.mu.Unlock()
 
 	recordEvent("L1_STREAM", "DIRECT_INJECTION", "HIGH", "test", "gpt-4", true)
@@ -116,7 +118,7 @@ func TestGetEventsAndStats_ReturnsSnapshot(t *testing.T) {
 
 func TestRecordEvent_TimestampIsRecent(t *testing.T) {
 	eventStore.mu.Lock()
-	eventStore.events = make([]ThreatEvent, 0)
+	eventStore.events = make([]alerting.ThreatEvent, 0)
 	eventStore.mu.Unlock()
 
 	before := time.Now()
@@ -184,7 +186,7 @@ func TestTruncateSnippet_Long(t *testing.T) {
 
 func TestGetEventsAndStats_EmptyStore(t *testing.T) {
 	eventStore.mu.Lock()
-	eventStore.events = make([]ThreatEvent, 0)
+	eventStore.events = make([]alerting.ThreatEvent, 0)
 	eventStore.mu.Unlock()
 
 	events, stats := getEventsAndStats()
@@ -211,7 +213,7 @@ func TestTruncateSnippet_Unicode(t *testing.T) {
 
 func TestRecordEvent_UniqueIDs(t *testing.T) {
 	eventStore.mu.Lock()
-	eventStore.events = make([]ThreatEvent, 0)
+	eventStore.events = make([]alerting.ThreatEvent, 0)
 	eventStore.mu.Unlock()
 
 	recordEvent("L1_STREAM", "TEST", "HIGH", "a", "gpt-4", true)
@@ -225,7 +227,7 @@ func TestRecordEvent_UniqueIDs(t *testing.T) {
 
 func TestRecordEvent_ConcurrentSafety(t *testing.T) {
 	eventStore.mu.Lock()
-	eventStore.events = make([]ThreatEvent, 0)
+	eventStore.events = make([]alerting.ThreatEvent, 0)
 	eventStore.mu.Unlock()
 
 	done := make(chan bool, 50)
