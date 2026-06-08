@@ -24,6 +24,7 @@ COPY scanner/ scanner/
 COPY sandbox/ sandbox/
 COPY alerting/ alerting/
 COPY config/ config/
+COPY ratelimit/ ratelimit/
 
 # Build a statically-linked binary with stripped debug info
 RUN CGO_ENABLED=0 GOOS=linux go build \
