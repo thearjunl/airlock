@@ -2,7 +2,7 @@
 
 **AI API Security Proxy** — A reverse proxy that sits in front of LLM APIs and inspects every request through a multi-layer security pipeline before forwarding it upstream.
     
-## Architecture
+## Architecture  
 
 ```
 Client → AirLock Proxy (:8080) → Security Pipeline → Upstream API
